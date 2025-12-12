@@ -1,20 +1,68 @@
+"use client";
+
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { getGameDetails } from "@/lib/giantbomb";
-import AddToLibrary from "@/components/AddToLibrary";
-import StatusSelector from "@/components/StatusSelector";
+import { saveGame, removeGame, getGameData } from "@/lib/library";
+import StarRating from "@/components/StarRating";
 
-export default async function GameDetailsPage(props) {
-  const params = await props.params;
-  const id = params.id;
+export default function GameDetailsPage() {
+  const { id } = useParams();
 
-  const game = await getGameDetails(id);
+  const [game, setGame] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [status, setStatus] = useState("none");
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      const details = await getGameDetails(id);
+      setGame(details);
+
+      const saved = getGameData(details.id);
+      if (saved) {
+        setIsSaved(true);
+        setStatus(saved.status || "none");
+        setRating(saved.rating || 0);
+        setReview(saved.review || "");
+      }
+    }
+    load();
+  }, [id]);
+
+  function handleToggleSave() {
+    if (!game) return;
+
+    if (!isSaved) {
+      saveGame(game, status, rating, review);
+      setIsSaved(true);
+    } else {
+      removeGame(game.id);
+      setIsSaved(false);
+    }
+  }
+
+  function handleSaveChanges() {
+    if (!game) return;
+    saveGame(game, status, rating, review);
+    setIsSaved(true);
+  }
+
+  if (!game) return <main style={{ padding: 20 }}>Loading...</main>;
 
   return (
-    <main style={{ padding: 20 }}>
+    <main style={{ padding: 20, maxWidth: "900px", margin: "0 auto" }}>
       <h1 style={{ fontSize: "32px", fontWeight: "bold" }}>{game.name}</h1>
 
-      {/* Two-column layout */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        {/* IMAGE */}
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          marginTop: "20px",
+          flexWrap: "wrap",
+        }}
+      >
         <img
           src={game.image.original_url}
           alt={game.name}
@@ -25,32 +73,90 @@ export default async function GameDetailsPage(props) {
           }}
         />
 
-        {/* DETAILS */}
-        <div>
-          {game.released && (
-            <p><strong>Release Date:</strong> {game.released}</p>
-          )}
+        <div style={{ flex: 1, minWidth: "260px" }}>
 
-          {game.genres.length > 0 && (
-            <p><strong>Genres:</strong> {game.genres.join(", ")}</p>
-          )}
+          {/* Toggle */}
+          <button
+            onClick={handleToggleSave}
+            style={{
+              padding: "10px 15px",
+              background: isSaved ? "#e63946" : "#0070f3",
+              color: "white",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              marginBottom: "15px",
+            }}
+          >
+            {isSaved ? "Remove from Library" : "Add to Library"}
+          </button>
 
-          {game.platforms.length > 0 && (
-            <p><strong>Platforms:</strong> {game.platforms.join(", ")}</p>
-          )}
+          {/* Status */}
+          <label><strong>Status:</strong></label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            style={{
+              display: "block",
+              padding: 8,
+              borderRadius: 6,
+              border: "1px solid #ccc",
+              marginTop: 5,
+            }}
+          >
+            <option value="none">None</option>
+            <option value="playing">🎮 Playing</option>
+            <option value="wishlist">⭐ Want to Play</option>
+            <option value="completed">🏆 Completed</option>
+          </select>
 
-          <AddToLibrary game={game} />
-          <StatusSelector game={game} />
+          {/* Rating */}
+          <div style={{ marginTop: 20 }}>
+            <strong>Your Rating:</strong>
+            <StarRating value={rating} onChange={setRating} />
+          </div>
+
+          {/* Review */}
+          <div style={{ marginTop: 20 }}>
+            <strong>Your Review / Notes:</strong>
+            <textarea
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
+              placeholder="Write your thoughts..."
+              style={{
+                width: "100%",
+                height: "120px",
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid #ccc",
+                marginTop: 5,
+              }}
+            />
+          </div>
+
+          {/* Save Changes */}
+          <button
+            onClick={handleSaveChanges}
+            style={{
+              marginTop: 15,
+              padding: "10px 15px",
+              background: "#4caf50",
+              color: "white",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Save Changes
+          </button>
         </div>
       </div>
 
-      {/* DESCRIPTION */}
-      <div style={{ marginTop: "30px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Description</h2>
-        <p style={{ lineHeight: 1.6, marginTop: "10px" }}>
-          {game.description}
-        </p>
-      </div>
+      {/* Description */}
+      <section style={{ marginTop: 40 }}>
+        <h2>Description</h2>
+        <p style={{ lineHeight: 1.6 }}>{game.description}</p>
+      </section>
     </main>
   );
 }

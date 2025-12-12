@@ -1,47 +1,39 @@
-const API_KEY = process.env.RAWG_API_KEY;
-
 export async function searchGames(query) {
-  if (!query) return [];
+  const url = `https://api.rawg.io/api/games?key=${process.env.NEXT_PUBLIC_RAWG_API_KEY}&search=${query}`;
 
-  const response = await fetch(
-    `https://api.rawg.io/api/games?key=${API_KEY}&search=${encodeURIComponent(query)}`,
-    { cache: "no-store" }
-  );
+  const res = await fetch(url);
+  const data = await res.json();
 
-  const data = await response.json();
-  
-  if (!data.results) return [];
-
-  return data.results.map((game) => ({
-    id: game.id,
-    name: game.name,
-    deck: game.slug,
+  return (data.results || []).map((g) => ({
+    id: g.id,
+    name: g.name,
     image: {
-      thumb_url: game.background_image,
-      original_url: game.background_image,
+      thumb_url: g.background_image || "https://placehold.co/300x400",
+      original_url: g.background_image || "https://placehold.co/600x800",
     },
+    genres: g.genres?.map((gen) => gen.name) || [],
+    platforms: g.platforms?.map((p) => p.platform.name) || [],
+    description: "", // RAWG search does NOT include description
+    released: g.released || "Unknown",
   }));
 }
 
 export async function getGameDetails(id) {
-  const res = await fetch(
-    `https://api.rawg.io/api/games/${id}?key=${API_KEY}`,
-    { cache: "no-store" }
-  );
+  const url = `https://api.rawg.io/api/games/${id}?key=${process.env.NEXT_PUBLIC_RAWG_API_KEY}`;
 
-  const game = await res.json();
+  const res = await fetch(url);
+  const g = await res.json();
 
   return {
-    id: game.id,
-    name: game.name,
-    description: game.description_raw,
+    id: g.id,
+    name: g.name,
     image: {
-      thumb_url: game.background_image,
-      original_url: game.background_image,
+      thumb_url: g.background_image || "https://placehold.co/300x400",
+      original_url: g.background_image || "https://placehold.co/600x800",
     },
-    released: game.released,
-    genres: game.genres?.map((g) => g.name) || [],
-    platforms:
-      game.platforms?.map((p) => p.platform?.name).filter(Boolean) || [],
+    genres: g.genres?.map((gen) => gen.name) || [],
+    platforms: g.platforms?.map((p) => p.platform.name) || [],
+    description: g.description_raw || "No description provided.",
+    released: g.released || "Unknown",
   };
 }

@@ -1,47 +1,47 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { searchGames } from "@/lib/giantbomb";
 import GameCard from "@/components/GameCard";
+import { searchGames } from "@/lib/giantbomb"; // or RAWG version
 
 export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get("query") || "";
-
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
 
+  // Read ?query from URL manually (avoids Suspense requirement)
   useEffect(() => {
-    async function run() {
-      if (!query) {
-        setResults([]);
-        return;
-      }
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("query") || "";
+    setQuery(q);
 
-      const games = await searchGames(query);
-      setResults(games);
+    async function load() {
+      if (!q) return;
+      const games = await searchGames(q);
+      setResults(games || []);
     }
 
-    run();
-  }, [query]);
+    load();
+  }, []);
 
   return (
     <main style={{ padding: 20 }}>
-      <h1 style={{ fontSize: "28px", fontWeight: "bold" }}>Search Results</h1>
+      <h1 style={{ fontSize: "28px", fontWeight: "bold" }}>
+        Search Results
+      </h1>
 
       {!query && <p>Use the search bar above.</p>}
-      {query && results.length === 0 && <p>No games found.</p>}
+      {query && results.length === 0 && <p>No results found.</p>}
 
       <div
         style={{
-          marginTop: 20,
+          marginTop: "20px",
           display: "grid",
-          gap: 20,
+          gap: "20px",
           gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
         }}
       >
-        {results.map((g) => (
-          <GameCard key={g.id} game={g} />
+        {results.map((game) => (
+          <GameCard key={game.id} game={game} />
         ))}
       </div>
     </main>
